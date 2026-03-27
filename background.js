@@ -132,9 +132,6 @@ let currentProjectId = null; // Global variable to cache current project ID
 let projectGoals = []; // Global variable to cache project goals
 let cachedGoalsProjectId = null; // NEW: Track which project the goals belong to
 
-// USER REQUIREMENT: Store Keyword Type in the Extension Layout Memory (instead of storage)
-let currentActiveKeywordTypeLayout = null;
-
 // Helper to ensure we have the Project ID
 async function ensureProjectId() {
   if (currentProjectId) return currentProjectId;
@@ -190,7 +187,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       const goals = await getFreshGoals(projectId);
 
       // Normalize key from content script (e.g. "0-20")
-      const requestedKey = message.keywordType.toString().replace(/%/g, '').trim();
+      const requestedKey = message.keywordType.replace(/%/g, '').trim();
 
       // Find matching goal
       const goal = goals.find(g => g.type_key.replace(/%/g, '').trim() === requestedKey);
@@ -228,72 +225,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (sender.tab && sender.tab.id) {
       chrome.tabs.remove(sender.tab.id);
     }
-    return true;
-  }
-
-  if (message.action === 'FETCH_FE_LINK') {
-    // Ultimate reliable path: Ghost Tab reading window state to bypass AF-Bot
-    chrome.tabs.create({ url: message.url, active: false }, (newTab) => {
-        let attempts = 0;
-        const checkInterval = setInterval(() => {
-            attempts++;
-            if (attempts > 30) { // 15 seconds max (500ms x 30)
-                clearInterval(checkInterval);
-                chrome.tabs.remove(newTab.id).catch(()=>{});
-                sendResponse({ success: true, apiData: null, html: "" }); // Will fallback to Sem Título safely
-                return;
-            }
-
-            chrome.scripting.executeScript({
-                target: { tabId: newTab.id },
-                world: "MAIN",
-                func: (currentAttempt) => {
-                    // Try to grab from Shopee Nuxt State first
-                    try {
-                        let item = null;
-                        if (window.__META_APP_DETAILS__) {
-                           const appData = window.__META_APP_DETAILS__;
-                           if (appData.data && appData.data.item) {
-                               item = appData.data.item;
-                           } else if (appData.item) {
-                               item = appData.item;
-                           }
-                        }
-                        
-                        if (!item && window.__INITIAL_STATE__ && window.__INITIAL_STATE__.product && window.__INITIAL_STATE__.product.item) {
-                            item = window.__INITIAL_STATE__.product.item;
-                        }
-
-                        if (item) return { found: true, data: item, html: "" };
-
-                        // If state objects failed after 3 seconds, try to scrape DOM directly!
-                        if (currentAttempt > 6 && (document.querySelector('.vR6K3w') || document.querySelector('.product-detail'))) {
-                            return { found: true, data: null, html: document.documentElement.outerHTML };
-                        }
-                    } catch(e) {}
-                    return { found: false, data: null, html: "" };
-                },
-                args: [attempts]
-            }, (results) => {
-                if (chrome.runtime.lastError) return; // Tab might be dead or navigating
-                if (results && results[0] && results[0].result && results[0].result.found) {
-                    clearInterval(checkInterval);
-                    chrome.tabs.remove(newTab.id).catch(()=>{});
-                    sendResponse({ 
-                        success: true, 
-                        apiData: results[0].result.data,
-                        html: results[0].result.html 
-                    });
-                }
-            });
-        }, 500);
-    });
-
-    return true; // Keep channel open
   }
 });
 
-// Helper for other tasks
 async function handleImportProject(projectName, goals, sendResponse) {
   try {
     // 1. Find or Create Project
@@ -399,15 +333,13 @@ async function handleIncrement(keywordType, sendResponse) {
       return;
     }
 
-    // Normalize key (CRITICAL FIX)
-    const cleanType = keywordType.toString().replace(/%/g, '').trim();
-
+    // 1. Get current goal data
     // 1. Get current goal data
     let { data: goal, error: fetchError } = await supabase
       .from('project_goals')
       .select('*')
       .eq('project_id', currentProjectId)
-      .eq('type_key', cleanType)
+      .eq('type_key', keywordType)
       .single();
 
     // FALLBACK: If not found, check for LEGACY key (with %)
@@ -446,7 +378,7 @@ async function handleIncrement(keywordType, sendResponse) {
     // Check if limit reached
     if (targetAmount > 0 && currentAmount >= targetAmount) {
       sendResponse({ success: false, error: 'Meta atingida!', blocked: true });
-      broadcastBlocking(cleanType);
+      broadcastBlocking(keywordType);
       return;
     }
 
@@ -455,31 +387,28 @@ async function handleIncrement(keywordType, sendResponse) {
     const newAmount = currentAmount + 1;
 
     // PREPARE UPDATE
-    let updateError = null;
+    // If we found a goal (either clean or legacy), we use its ID.
+    // If we use the ID, we can update the type_key to the clean one (MIGRATION).
+    const upsertPayload = {
+      project_id: currentProjectId,
+      type_key: keywordType, // Always enforce clean key
+      current_amount: newAmount
+    };
 
     if (goalId) {
-      // It exists -> UPDATE
-      const { error: err } = await supabase
-        .from('project_goals')
-        .update({ current_amount: newAmount })
-        .eq('id', goalId);
-      updateError = err;
+      upsertPayload.id = goalId;
     } else {
-      // It does NOT exist -> INSERT
-      const { error: err } = await supabase
-        .from('project_goals')
-        .insert([{
-          project_id: currentProjectId,
-          type_key: cleanType,
-          current_amount: newAmount,
-          target_amount: 0
-        }]);
-      updateError = err;
+      // If no ID (creating new), maybe we want to set target if available? 
+      // We can't know target here easily without reading project goals again or assuming default.
+      // For now, simple upsert is fine.
     }
 
-    if (updateError) throw updateError;
+    // Upsert to ensure it exists or updates
+    const { error: updateError } = await supabase
+      .from('project_goals')
+      .upsert(upsertPayload);
 
-    lastFetchTime = 0; // Invalidate cache after modification
+    if (updateError) throw updateError;
 
     // Notify all tabs of the update
     broadcastUpdate();
@@ -513,16 +442,13 @@ async function handleDecrement(keywordType, sendResponse) {
       return;
     }
 
-    // Normalize key
-    const cleanType = keywordType.toString().replace(/%/g, '').trim();
-
     // 1. Get current goal data
     console.log('Fetching goal from Supabase...');
     let { data: goal, error: fetchError } = await supabase
       .from('project_goals')
       .select('*')
       .eq('project_id', currentProjectId)
-      .eq('type_key', cleanType)
+      .eq('type_key', keywordType)
       .single();
 
     if (fetchError) {
@@ -544,33 +470,26 @@ async function handleDecrement(keywordType, sendResponse) {
     const newAmount = currentAmount - 1;
     console.log('New Amount will be:', newAmount);
 
-    let updateError = null;
+    // PREPARE UPDATE
+    const upsertPayload = {
+      project_id: currentProjectId,
+      type_key: keywordType,
+      current_amount: newAmount
+    };
 
-    if (goal) {
-      const { error: err } = await supabase
-        .from('project_goals')
-        .update({ current_amount: newAmount })
-        .eq('id', goal.id);
-      updateError = err;
-    } else {
-      const { error: err } = await supabase
-        .from('project_goals')
-        .insert([{
-          project_id: currentProjectId,
-          type_key: cleanType,
-          current_amount: newAmount,
-          target_amount: 0
-        }]);
-      updateError = err;
-    }
+    if (goal) upsertPayload.id = goal.id;
+
+    console.log('Upserting payload:', upsertPayload);
+    const { error: updateError } = await supabase
+      .from('project_goals')
+      .upsert(upsertPayload);
 
     if (updateError) {
       console.error('Update error:', updateError);
       throw updateError;
     }
 
-    lastFetchTime = 0; // Invalidate cache after modification
-
+    console.log('Update success, sending response.');
     console.log('Update success, sending response.');
     // sendResponse({ success: true, newCount: newAmount }); // Moved after broadcastUpdate
 
@@ -670,13 +589,11 @@ async function checkBlockStatus(keywordType, sendResponse) {
       return;
     }
 
-    const cleanKey = keywordType.toString().replace(/%/g, '').trim();
-
     const { data: goal } = await supabase
       .from('project_goals')
       .select('target_amount, current_amount')
       .eq('project_id', currentProjectId)
-      .eq('type_key', cleanKey)
+      .eq('type_key', keywordType)
       .single();
 
     if (goal && goal.target_amount > 0 && goal.current_amount >= goal.target_amount) {
@@ -754,7 +671,7 @@ async function handleValidateAndIncrement(keywordType, currentUrl, sendResponse)
 
     // 2. Check Goal Limit (Server Logic)
     const goals = await getFreshGoals(projectId);
-    const requestedKey = keywordType.toString().replace(/%/g, '').trim();
+    const requestedKey = keywordType.replace(/%/g, '').trim();
     const goal = goals.find(g => g.type_key.replace(/%/g, '').trim() === requestedKey);
 
     if (goal && goal.target_amount > 0 && goal.current_amount >= goal.target_amount) {
@@ -768,63 +685,42 @@ async function handleValidateAndIncrement(keywordType, currentUrl, sendResponse)
     projectWork[projectId].countedUrls.push(currentUrl);
     await chrome.storage.local.set({ projectWork: projectWork });
 
-    // 4. Fetch absolute latest data from DB to prevent Stale Cache overwrites (extremely important for rapid clicks)
-    let finalGoalId = null;
-    let currentAmount = 0;
-    
-    let { data: currentGoal } = await supabase
+    // 4. Increment in Database
+    const { data: currentGoal } = await supabase
       .from('project_goals')
       .select('*')
       .eq('project_id', projectId)
-      .eq('type_key', requestedKey)
-      .maybeSingle();
+      .eq('type_key', keywordType)
+      .single();
 
+    // Fallback logic
+    let finalGoalId = currentGoal?.id;
+    let currentAmount = currentGoal ? currentGoal.current_amount : 0;
+
+    // Logic for Legacy keys fallback (simplified)
     if (!currentGoal) {
-      // Try legacy format with %
-      const legacyKey = requestedKey.replace(/(\d+)-(\d+)/, '$1%-$2%');
-      const { data: legacyGoal } = await supabase
-        .from('project_goals')
-        .select('*')
-        .eq('project_id', projectId)
-        .eq('type_key', legacyKey)
-        .maybeSingle();
-      if (legacyGoal) currentGoal = legacyGoal;
+      const legacyKey = keywordType + '%';
+      const { data: legacyGoal } = await supabase.from('project_goals').select('*').eq('project_id', projectId).eq('type_key', legacyKey).single();
+      if (legacyGoal) {
+        finalGoalId = legacyGoal.id;
+        currentAmount = legacyGoal.current_amount;
+      }
     }
-
-    if (currentGoal) {
-      finalGoalId = currentGoal.id;
-      currentAmount = currentGoal.current_amount;
-    }
-
-    // VERY IMPORTANT: Use the exact original key format from DB if we found it, to safely respect Vercel's legacy systems (which might include %).
-    // If not found, enforce Vercel's expected % format for new creations (e.g. 50%-80%)
-    let targetDbKey = currentGoal ? currentGoal.type_key : requestedKey.replace(/(\d+)-(\d+)/, '$1%-$2%');
 
     const newAmount = currentAmount + 1;
-    let updateError = null;
+    const upsertPayload = {
+      project_id: projectId,
+      type_key: keywordType,
+      current_amount: newAmount
+    };
+    if (finalGoalId) upsertPayload.id = finalGoalId;
 
-    if (finalGoalId) {
-      // It exists -> UPDATE
-      const { error: err } = await supabase
-        .from('project_goals')
-        .update({ current_amount: newAmount })
-        .eq('id', finalGoalId);
-      updateError = err;
-    } else {
-      // It does NOT exist -> INSERT
-      const { error: err } = await supabase
-        .from('project_goals')
-        .insert([{
-          project_id: projectId,
-          type_key: targetDbKey,
-          current_amount: newAmount,
-          target_amount: 0
-        }]);
-      updateError = err;
-    }
+    const { error: updateError } = await supabase
+      .from('project_goals')
+      .upsert(upsertPayload);
 
     if (updateError) {
-      console.error('DB Increment failed, reverting URL lock', updateError);
+      console.error('DB Increment failed, reverting URL lock');
       // Re-read storage to avoid overwriting parallel changes
       const latestResult = await chrome.storage.local.get(['projectWork']);
       const latestWork = latestResult.projectWork || {};
@@ -834,8 +730,6 @@ async function handleValidateAndIncrement(keywordType, currentUrl, sendResponse)
       }
       throw updateError;
     }
-
-    lastFetchTime = 0; // Force fresh goal fetch for next click to prevent stale limits
 
     // 5. Update Local Stats
     await updateLocalProgress(projectId, keywordType);

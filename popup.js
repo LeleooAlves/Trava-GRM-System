@@ -86,15 +86,12 @@ function showTypesConfigModal() {
     });
 
     // STRICT VISUAL FILTER: Only show the 4 official types
-    // This hides historical "garbage" from the user verify view
+    // This hides historical "garbage" (like 3-10, 8----100) from the user verify view
     const allowedDisplayTypes = ['0-20', '20-50', '50-80', '80-100'];
 
     sortedGoals.forEach(goal => {
-      // Clean string for visual matching only
-      const displayCheckClean = goal.type_key.replace(/%/g, '').trim();
-
       // Skip if not in whitelist
-      if (!allowedDisplayTypes.includes(displayCheckClean)) return;
+      if (!allowedDisplayTypes.includes(goal.type_key)) return;
 
       const row = document.createElement('div');
       row.className = 'type-limit-row'; // Reuse class for styling

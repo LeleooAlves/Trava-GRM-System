@@ -1,25 +1,14 @@
 {
   "manifest_version": 3,
-  "name": "Super Extensão GRM",
-  "version": "1.0",
-  "description": "Ferramenta unificada: Contador de KWs e Shopee Relevance Auto-Selector.",
+  "name": "Kw's Contável",
+  "version": "1.7",
+  "description": "Contador de KWs com atalho personalizado",
   "permissions": [
     "storage",
-    "notifications",
-    "activeTab",
-    "scripting"
-  ],
-  "host_permissions": [
-    "https://sqe.search.shopee.io/*",
-    "https://knowledgeadmin.search.shopee.io/*",
-    "https://*.shopee.com.br/*",
-    "https://shopee.com.br/*",
-    "https://knowledge.alpha.insea.io/*",
-    "https://knowledge.alpha.test.insea.io/*"
+    "notifications"
   ],
   "action": {
-    "default_popup": "index.html",
-    "default_title": "Super Extensão GRM",
+    "default_popup": "popup.html",
     "default_icon": {
       "16": "icon/icon16.png",
       "32": "icon/icon32.png",
@@ -47,17 +36,6 @@
       "matches": [
         "<all_urls>"
       ]
-    },
-    {
-      "resources": [
-        "*.html",
-        "*.css",
-        "*.js"
-      ],
-      "matches": [
-        "https://sqe.search.shopee.io/*",
-        "https://knowledgeadmin.search.shopee.io/*"
-      ]
     }
   ],
   "content_scripts": [
@@ -67,19 +45,10 @@
       ],
       "all_frames": true,
       "css": [
-        "content_trava.css"
+        "content.css"
       ],
       "js": [
-        "content_trava.js"
-      ]
-    },
-    {
-      "matches": [
-        "https://sqe.search.shopee.io/*",
-        "https://knowledgeadmin.search.shopee.io/*"
-      ],
-      "js": [
-        "content_relevancia.js"
+        "content.js"
       ]
     }
   ]
