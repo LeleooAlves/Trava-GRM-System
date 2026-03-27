@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <title>Contador de KW's</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+  <div class="container">
+    <div class="logo-container">
+      <input type="email" id="userEmail" class="email-input" placeholder="Seu e-mail (ex: agente@email.com)"
+        style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 10px;">
+    </div>
+
+    <div class="status-row">
+      <div id="connectionStatus" class="status-indicator" title="Sincronização"></div>
+      <span id="connectionText" class="status-text">Sincronizado</span>
+    </div>
+
+    <div class="input-group">
+      <input type="text" id="projectName" placeholder="Nome do Projeto" />
+    </div>
+
+    <div class="counter-display">
+      <div class="counter-controls">
+        <button id="decrementBtn" class="counter-btn" title="Remover KW (Erro)">-</button>
+        <div id="counter">0</div>
+        <button id="incrementBtn" class="counter-btn" title="Adicionar KW (Manual)">+</button>
+      </div>
+      <div class="counter-label">KW POR PROJETO</div>
+      <div id="etaDisplay" class="eta-label">ETA: --/--/----</div>
+    </div>
+
+    <div class="history-section">
+      <div class="types-config">
+        <div class="types-config-header">
+          <div class="types-section">
+            <h3>Types</h3>
+            <button id="toggleGoals" class="toggle-goals-btn">📊 Acompanhar Geral</button>
+            <div id="keywordTypeStats">
+              <!-- Stats will be injected here -->
+            </div>
+          </div>
+          <div id="keywordTypeStats" class="types-list">
+            <!-- Types will be populated here by js -->
+          </div>
+        </div>
+
+        <div class="controls">
+          <button id="finishProject" class="btn">
+            <span class="btn-text">Finalizar Projeto</span>
+            <img src="imagem/finish_icon.png" alt="Finish Project" class="btn-logo">
+          </button>
+        </div>
+      </div>
+      <script src="supabase-bundle.js"></script>
+      <script src="popup_trava.js"></script>
+</body>
+
+</html>

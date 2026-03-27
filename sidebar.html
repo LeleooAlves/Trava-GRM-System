@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shopee Relevance</title>
+    <link rel="stylesheet" href="sidebar.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="container">
+        <div class="flip-container" id="flip-container">
+            <div class="flipper">
+                <div class="front">
+                    <header>
+            <h1>Select Relevance</h1>
+            <p class="subtitle">Auto-fill all items on page</p>
+        </header>
+
+        <div class="keyword-section" id="keyword-display">
+            <span class="label">Keyword:</span>
+            <span class="value" id="kw-value">Detecting...</span>
+        </div>
+
+        <div class="options">
+            <label class="option-card irrelevant">
+                <input type="radio" name="relevance" value="irrelevant">
+                <div class="card-content">
+                    <div class="indicator red"></div>
+                    <span>Irrelevant</span>
+                </div>
+            </label>
+
+            <label class="option-card medium">
+                <input type="radio" name="relevance" value="medium">
+                <div class="card-content">
+                    <div class="indicator yellow"></div>
+                    <span>Medium Relevant</span>
+                </div>
+            </label>
+
+            <label class="option-card relevant">
+                <input type="radio" name="relevance" value="relevant">
+                <div class="card-content">
+                    <div class="indicator green"></div>
+                    <span>Relevant</span>
+                </div>
+            </label>
+        </div>
+
+        <button id="apply-btn" class="apply-btn">
+            Apply to All
+        </button>
+
+
+        <!-- Unfilled Navigator -->
+        <div class="unfilled-section">
+            <div class="unfilled-header">
+                <span id="unfilled-count">Verifying...</span>
+            </div>
+            <div class="unfilled-controls">
+                <button id="nav-up-btn" class="nav-btn" disabled>▲</button>
+                <button id="nav-down-btn" class="nav-btn" disabled>▼</button>
+            </div>
+        </div>
+
+        <!-- AI Specialist Section -->
+        <div class="ai-specialist-section hidden" id="ai-specialist-section">
+            <div class="ai-header">
+                <strong>✨ AI Specialist</strong>
+            </div>
+            <div id="ai-content" class="ai-content">
+                <div class="ai-loading">
+                    <div class="spinner-small"></div>
+                    <span>Analisando...</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="mode-selection hidden" id="mode-selection">
+            <p class="mode-title">Operation Mode:</p>
+
+            <!-- Options for Medium/Irrelevant -->
+            <div id="options-complex" class="options-group hidden">
+                <label class="mode-option">
+                    <input type="radio" name="mode_complex" value="simple">
+                    <span>Only mark relevance</span>
+                </label>
+                <label class="mode-option">
+                    <input type="radio" name="mode_complex" value="reasons" checked>
+                    <span>Mark + Open Reasons (All)</span>
+                </label>
+                <label class="mode-option">
+                    <input type="radio" name="mode_complex" value="reasons_skip">
+                    <span>Mark + Open Reasons (Skip filled)</span>
+                </label>
+            </div>
+
+            <!-- Options for Relevant -->
+            <div id="options-simple" class="options-group hidden">
+                <label class="mode-option">
+                    <input type="checkbox" id="skip-filled-simple" checked>
+                    <span>Skip filled items</span>
+                </label>
+            </div>
+        </div>
+        </div>
+
+        <div id="status" class="status"></div>
+                </div> <!-- End front -->
+                
+                <!-- BACK OF CARD -->
+                <div class="back" id="product-preview">
+                    <div class="preview-header">
+                        <button id="preview-back-btn" class="preview-back-btn">← Voltar</button>
+                        <span>Card Information</span>
+                    </div>
+                    <div class="card-search-container" style="display: flex; gap: 8px; padding: 8px; border-bottom: 1px solid #eee; background: #fafafa; align-items: center; position: sticky; top: 0; z-index: 20;">
+                        <input type="text" id="card-search-input" placeholder="Buscar (ex: vermelho p 32)..." style="flex: 1; padding: 6px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;">
+                        <div id="card-search-counter" style="font-size: 12px; color: #666; display: none; white-space: nowrap;">0/0</div>
+                        <div id="card-search-nav" style="display: none; gap: 4px; align-items: center;">
+                            <button id="card-search-up" class="clear-btn" style="cursor: pointer; background: #f0f0f0; border: 1px solid #ddd; border-radius: 4px; padding: 2px 6px; font-size: 10px; color: #666;">▲</button>
+                            <button id="card-search-down" class="clear-btn" style="cursor: pointer; background: #f0f0f0; border: 1px solid #ddd; border-radius: 4px; padding: 2px 6px; font-size: 10px; color: #666;">▼</button>
+                        </div>
+                        <button id="card-search-clear" class="clear-btn" style="cursor: pointer; background: #f0f0f0; border: 1px solid #ddd; border-radius: 4px; padding: 0 8px; font-size: 14px; font-weight: bold; color: #666;" title="Limpar pesquisa">✖</button>
+                    </div>
+                    
+                    <div id="preview-loading" class="preview-loading hidden">
+                        <div class="spinner"></div> Carregando Produto...
+                    </div>
+
+                    <div id="preview-content-area" class="preview-content">
+                        <!-- Carousel Container -->
+                        <div id="preview-carousel" class="preview-carousel"></div>
+                        
+                        <!-- Info Section -->
+                        <div class="preview-info">
+                            <h1 id="preview-title" class="preview-title"></h1>
+                            <div id="preview-variations" class="preview-variations"></div>
+                            <div id="preview-details" class="preview-details"></div>
+                        </div>
+                    </div>
+                </div> <!-- End back -->
+            </div> <!-- End flipper -->
+        </div> <!-- End flip-container -->
+    </div>
+    <script type="module" src="sidebar.js"></script>
+</body>
+
+</html>
