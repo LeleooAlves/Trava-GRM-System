@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Controle - KW's</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+</head>
+
+<body>
+    <div class="app-container">
+        <header class="main-header">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/fe/Shopee.svg/1200px-Shopee.svg.png"
+                alt="Shopee Logo" class="shopee-logo">
+            <nav class="floating-nav-container">
+                <div class="nav-slider"></div>
+                <button class="nav-item active" onclick="openTab(event, 'tab-dashboard')">
+                    <span class="nav-icon">📊</span> Dashboard
+                </button>
+                <button class="nav-item" onclick="openTab(event, 'tab-progress')">
+                    <span class="nav-icon">🕒</span> Andamento
+                </button>
+                <button class="nav-item" onclick="openTab(event, 'tab-completed')">
+                    <span class="nav-icon">✅</span> Finalizados
+                </button>
+            </nav>
+        </header>
+
+        <div class="control-panel-container">
+            <div class="status-banner-compact">
+                <div id="connectionStatus" class="status-indicator online"></div>
+                <span id="connectionText" class="status-text">Sincronizado</span>
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+
+            <!-- Dashboard Overview Content -->
+            <div id="tab-dashboard" class="tab-content active">
+                <div class="dashboard-stats">
+                    <div class="stat-card large">
+                        <span class="stat-label">Total de Keywords Realizadas</span>
+                        <strong id="totalKeywordsDone">0</strong>
+                    </div>
+                    <div class="stat-row-summary">
+                        <div class="stat-card small">
+                            <span class="stat-label">Projetos Adicionados</span>
+                            <strong id="totalProjectsAdded">0 adicionados</strong>
+                        </div>
+                        <div class="stat-card small">
+                            <span class="stat-label">Projetos Finalizados</span>
+                            <strong id="totalProjectsFinished">0 feitos</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Progress (Andamento) Content -->
+            <div id="tab-progress" class="tab-content">
+                <div class="control-panel-modern">
+                    <!-- Config Group -->
+                    <div class="config-group">
+                        <div class="config-item">
+                            <label>E.T.A</label>
+                            <input type="date" id="eta-input" class="modern-input">
+                        </div>
+                        <div class="config-item">
+                            <label>Equipe</label>
+                            <div class="input-with-action">
+                                <input type="number" id="peopleInput" value="1" min="1" class="modern-input small">
+                                <button id="copyWorkloadBtn" class="action-btn-subtle"
+                                    title="Copiar Divisão">📋</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Project Group -->
+                    <div class="project-group">
+                        <div class="select-box">
+                            <select id="projectSelect" class="modern-select">
+                                <option value="">Selecione um projeto...</option>
+                            </select>
+                        </div>
+                        <button id="manageAccessBtn" class="action-btn-subtle" title="Gerenciar Acesso"
+                            style="margin-right: 5px;">👥</button>
+                        <button id="editTypeBtn" class="action-btn-subtle" title="Alterar Tipo do Projeto"
+                            style="margin-right: 5px;">⚙️</button>
+                        <button id="createProjectBtn" class="primary-btn-modern" title="Novo Projeto">
+                            <span>+</span> Novo Projeto
+                        </button>
+                    </div>
+
+                    <!-- Daily Goal & Finish -->
+                    <div class="action-group">
+                        <div class="daily-goal-badge" title="Clique para copiar relatório">
+                            <span class="label">Pendente:</span>
+                            <span id="totalPendingDisplay" class="value">0</span>
+                        </div>
+                        <button id="finishProjectBtn" class="success-btn-modern">
+                            <span>🏁</span> Finalizar Projeto
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Cards Grid -->
+                <div id="goalsCardsContainer" class="cards-grid">
+                    <div class="loading-state">Carregando metas...</div>
+                </div>
+
+                <!-- Footer Summary -->
+                <div class="footer-summary">
+                    <div class="total-meta">
+                        <span>Meta do dia:</span>
+                        <strong id="dailyGoal">0</strong>
+                    </div>
+                    <button id="saveGoalsBtn" class="btn-save">Salvar Metas</button>
+                </div>
+            </div>
+
+            <!-- Completed Projects (Finalizados) Content -->
+            <div id="tab-completed" class="tab-content">
+                <div class="completed-header">
+                    <div class="search-wrapper-modern">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" id="completedSearch" placeholder="Buscar projetos finalizados por nome..."
+                            onkeyup="loadCompletedProjects(this.value)">
+                    </div>
+                </div>
+                <div id="completedProjectsContainer" class="completed-grid-modern">
+                    <!-- Projects with details will be rendered here -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div id="newProjectModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3>Novo Projeto</h3>
+            <input type="text" id="newProjectName" placeholder="Nome do Projeto">
+            <select id="newProjectType" style="width: 100%; margin: 10px 0; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-family: 'Segoe UI', sans-serif;">
+                <option value="normal">Tipo Normal (0-20, 20-50, 50-80, 80-100)</option>
+                <option value="diferenciado">Tipo Diferenciado (0-100%)</option>
+            </select>
+            <textarea id="projectEmails" placeholder="E-mails autorizados (linha/vírgula)" rows="3"
+                style="width: 100%; margin: 10px 0; padding: 8px;"></textarea>
+            <button id="confirmCreateProject">Criar</button>
+        </div>
+    </div>
+
+    <!-- Access Control Modal -->
+    <div id="accessControlModal" class="modal">
+        <div class="modal-content">
+            <span class="close-access">&times;</span>
+            <h3>Gerenciar Acesso</h3>
+            <p style="font-size: 0.9em; color: #666; margin-bottom: 10px;">Adicione os e-mails dos agentes autorizados a
+                visualizar este projeto.</p>
+            <textarea id="editProjectEmails" placeholder="E-mails autorizados (linha/vírgula)" rows="5"
+                style="width: 100%; margin: 10px 0; padding: 8px;"></textarea>
+            <div style="text-align: right;">
+                <button id="saveAccessBtn"
+                    style="background-color: #2196f3; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer;">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Type Modal -->
+    <div id="editTypeModal" class="modal">
+        <div class="modal-content">
+            <span class="close-edit-type">&times;</span>
+            <h3>Alterar Tipo do Projeto</h3>
+            <p style="font-size: 0.9em; color: #f44336; margin-bottom: 10px;">Aviso: Alterar o tipo irá <strong>Zerar</strong> completamente o progresso das metas atuais deste projeto.</p>
+            <label for="editProjectType">Selecione o novo tipo:</label>
+            <select id="editProjectType" style="width: 100%; margin: 10px 0; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-family: 'Segoe UI', sans-serif;">
+                <option value="normal">Tipo Normal (0-20, 20-50, 50-80, 80-100)</option>
+                <option value="diferenciado">Tipo Diferenciado (0-100%)</option>
+            </select>
+            <div style="text-align: right; margin-top: 15px;">
+                <button id="saveEditTypeBtn" style="background-color: #f44336; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer;">Alterar e Zerar Metas</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Confirmation Modal -->
+    <div id="confirmModal" class="modal">
+        <div class="modal-content custom-confirm">
+            <h3 id="confirmTitle">Tem certeza?</h3>
+            <p id="confirmMessage">Isso apagará o projeto e todas as metas permanentemente.</p>
+            <div class="confirm-actions">
+                <button id="confirmCancel" class="btn-cancel">Cancelar</button>
+                <button id="confirmOk" class="btn-confirm">Apagar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast">Salvo com sucesso!</div>
+
+    <script type="module" src="app.js"></script>
+</body>
+
+</html>

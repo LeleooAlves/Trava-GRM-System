@@ -1,15 +1,18 @@
 {
-  "name": "trava-grm-system",
+  "name": "sistema",
   "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
   "scripts": {
-    "dev": "./node_modules/.bin/vite",
-    "build": "./node_modules/.bin/vite build",
-    "preview": "./node_modules/.bin/vite preview"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "vite"
   },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
   "dependencies": {
-    "@supabase/supabase-js": "^2.39.0"
+    "@supabase/supabase-js": "^2.101.1",
+    "vite": "^8.0.3"
   },
-  "devDependencies": {
-    "vite": "^5.0.0"
-  }
+  "type": "module"
 }
