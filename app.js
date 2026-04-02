@@ -127,7 +127,7 @@ async function createProject(name) {
         // Webhook do Discord
         const webhookUrl = 'https://discord.com/api/webhooks/1481401126111674502/KU-WtqO5OjlJnFeONMd28i-4KTH3pWm9SqO38uf3_kTl2TsQjajoe7OnJ4Aa3XK4qrOr';
         const payload = {
-            content: `@here\nprojeto novo:\n\nnome: ${name}\nlink: ${projectLink || 'Nenhum link fornecido'}\n\nprojeto ja está configurado na extensão, não se esqueçam de selecionar o projeto correto na extensão e recarregar a página do sistema de SQE para que a extensão funcione corretamente.`
+            content: `@here\nprojeto novo:\n\nnome: ${name}\nlink: ${projectLink || 'Nenhum link fornecido'}\n\nO projeto ja está configurado na extensão, não se esqueçam de selecionar o projeto correto na extensão e recarregar a página do sistema de SQE para que a extensão funcione corretamente.`
         };
 
         try {
@@ -378,7 +378,7 @@ function updateUI() {
     let totalPending = 0;
 
     // Use sorted types based on db state
-    const types = Object.keys(projectGoals).sort((a,b) => (parseInt(a.split('-')[0]) || 0) - (parseInt(b.split('-')[0]) || 0));
+    const types = Object.keys(projectGoals).sort((a, b) => (parseInt(a.split('-')[0]) || 0) - (parseInt(b.split('-')[0]) || 0));
 
     types.forEach(type => {
         const goal = projectGoals[type] || { target_amount: 0, current_amount: 0, type_key: type };
@@ -609,7 +609,7 @@ async function loadCompletedProjects(searchTerm = '') {
         // Dynamically get types from the project's goals
         let types = projectGoals.map(g => g.type_key.toString().replace(/%/g, '').trim());
         if (types.length === 0) types = ['0-20', '20-50', '50-80', '80-100'];
-        types = [...new Set(types)].sort((a,b) => (parseInt(a.split('-')[0]) || 0) - (parseInt(b.split('-')[0]) || 0));
+        types = [...new Set(types)].sort((a, b) => (parseInt(a.split('-')[0]) || 0) - (parseInt(b.split('-')[0]) || 0));
 
         types.forEach(type => {
             const goal = projectGoals.find(g => g.type_key.toString().replace(/%/g, '').trim() === type) || { current_amount: 0 };
@@ -653,7 +653,17 @@ async function deleteProject(projectId) {
                 showToast('Erro ao apagar projeto: ' + projectError.message);
             } else {
                 showToast('Projeto apagado!');
-                loadCompletedProjects(document.getElementById('completedSearch').value);
+
+                if (projectId === currentProjectId) {
+                    projectSelect.value = '';
+                    loadProjectData(null);
+                    loadProjects();
+                }
+
+                const searchEl = document.getElementById('completedSearch');
+                if (searchEl) {
+                    loadCompletedProjects(searchEl.value);
+                }
                 await updateAggregateStats();
             }
         }
@@ -710,18 +720,18 @@ function openEditTypeModal() {
         showToast('Selecione um projeto primeiro.');
         return;
     }
-    
+
     // Determine current type by interrogating projectGoals keys
     const types = Object.keys(projectGoals);
     const isDiferenciado = types.some(t => t === '0-100' || t === '0-100%');
-    
+
     editProjectTypeSelect.value = isDiferenciado ? 'diferenciado' : 'normal';
     editTypeModal.style.display = 'block';
 }
 
 async function saveEditType() {
     if (!currentProjectId) return;
-    
+
     const isDiferenciado = editProjectTypeSelect.value === 'diferenciado';
     const initialTypes = isDiferenciado ? ['0-100%'] : ['0-20', '20-50', '50-80', '80-100'];
 
@@ -833,7 +843,7 @@ function setupEventListeners() {
     closeModalSpan.addEventListener('click', () => newProjectModal.style.display = 'none');
     const manageAccessBtn = document.getElementById('manageAccessBtn');
     if (manageAccessBtn) manageAccessBtn.addEventListener('click', openAccessModal);
-    
+
     const editTypeBtn = document.getElementById('editTypeBtn');
     if (editTypeBtn) editTypeBtn.addEventListener('click', openEditTypeModal);
     if (closeEditTypeSpan) closeEditTypeSpan.addEventListener('click', () => editTypeModal.style.display = 'none');
@@ -853,6 +863,17 @@ function setupEventListeners() {
     const finishBtn = document.getElementById('finishProjectBtn');
     if (finishBtn) {
         finishBtn.addEventListener('click', finishProject);
+    }
+
+    const deleteActiveBtn = document.getElementById('deleteActiveProjectBtn');
+    if (deleteActiveBtn) {
+        deleteActiveBtn.addEventListener('click', () => {
+            if (currentProjectId) {
+                deleteProject(currentProjectId);
+            } else {
+                showToast('Selecione um projeto para apagar.');
+            }
+        });
     }
 
     saveGoalsBtn.addEventListener('click', saveGoals);
@@ -931,7 +952,7 @@ function generateAndCopyReport() {
         const GAP = 20;
         const MARGIN = 20;
         const HEADER_H = 60; // Space for Project Name
-        const types = Object.keys(projectGoals).sort((a,b) => (parseInt(a.split('-')[0]) || 0) - (parseInt(b.split('-')[0]) || 0));
+        const types = Object.keys(projectGoals).sort((a, b) => (parseInt(a.split('-')[0]) || 0) - (parseInt(b.split('-')[0]) || 0));
         const numCards = types.length || 1;
 
         // Canvas Size
