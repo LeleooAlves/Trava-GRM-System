@@ -133,7 +133,7 @@ async function createProject(name) {
         const etaText = projectETA ? projectETA.split('-').reverse().join('/') : 'Nenhum ETA fornecido';
 
         // Webhook do Discord
-        const webhookUrl = newProjectWebhookSelect ? newProjectWebhookSelect.value : 'https://discord.com/api/webhooks/1481401126111674502/KU-WtqO5OjlJnFeONMd28i-4KTH3pWm9SqO38uf3_kTl2TsQjajoe7OnJ4Aa3XK4qrOr';
+        const webhookUrl = newProjectWebhookSelect ? newProjectWebhookSelect.value : 'https://discord.com/api/webhooks/1442949842820141281/zqt-Lyone9fzgSj58GmKzMgrREf9O1gF_t5qHpOUeWmZvCHl72G7_oGcZSnjI_JvR3x5';
         
         const payload = {
             content: `@here\nprojeto novo:\n\nnome: ${name}\nlink: ${projectLink || 'Nenhum link fornecido'}\nETA: ${etaText}\n\nO projeto ja está configurado na extensão, não se esqueçam de selecionar o projeto correto na extensão e recarregar a página do sistema de SQE para que a extensão funcione corretamente.`
