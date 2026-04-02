@@ -17,6 +17,7 @@ const newProjectModal = document.getElementById('newProjectModal');
 const closeModalSpan = document.getElementsByClassName('close')[0];
 const confirmCreateProjectBtn = document.getElementById('confirmCreateProject');
 const newProjectNameInput = document.getElementById('newProjectName');
+const newProjectLinkInput = document.getElementById('newProjectLink');
 const saveGoalsBtn = document.getElementById('saveGoalsBtn');
 const cardsContainer = document.getElementById('goalsCardsContainer');
 
@@ -121,6 +122,24 @@ async function createProject(name) {
     if (error) {
         showToast('Erro ao criar projeto: ' + error.message);
     } else {
+        const projectLink = newProjectLinkInput ? newProjectLinkInput.value.trim() : '';
+
+        // Webhook do Discord
+        const webhookUrl = 'https://discord.com/api/webhooks/1481401126111674502/KU-WtqO5OjlJnFeONMd28i-4KTH3pWm9SqO38uf3_kTl2TsQjajoe7OnJ4Aa3XK4qrOr';
+        const payload = {
+            content: `@here\nprojeto novo:\n\nnome: ${name}\nlink: ${projectLink || 'Nenhum link fornecido'}\n\nprojeto ja está configurado na extensão, não se esqueçam de selecionar o projeto correto na extensão e recarregar a página do sistema de SQE para que a extensão funcione corretamente.`
+        };
+
+        try {
+            fetch(webhookUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+        } catch (e) {
+            console.error('Erro ao enviar webhook:', e);
+        }
+
         const initialTypes = isDiferenciado ? ['0-100%'] : ['0-20', '20-50', '50-80', '80-100'];
         const goalsToInsert = initialTypes.map(t => ({
             project_id: data.id,
@@ -132,6 +151,7 @@ async function createProject(name) {
 
         newProjectModal.style.display = 'none';
         newProjectNameInput.value = '';
+        if (newProjectLinkInput) newProjectLinkInput.value = '';
         if (typeSelect) typeSelect.value = 'normal';
         if (emailsInput) emailsInput.value = ''; // Reset emails
         await loadProjects();
