@@ -140,11 +140,13 @@ async function createProject(name) {
         };
 
         try {
-            fetch(webhookUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
+            if (webhookUrl !== 'none') {
+                fetch(webhookUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+            }
         } catch (e) {
             console.error('Erro ao enviar webhook:', e);
         }
