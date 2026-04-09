@@ -304,12 +304,34 @@ async function saveGoals() {
         }
     });
 
-    const { error } = await supabase
-        .from('project_goals')
-        .upsert(updates);
+    // Separate existing records (have id) from new ones
+    const toUpdate = updates.filter(u => u.id);
+    const toInsert = updates.filter(u => !u.id);
 
-    if (error) {
-        showToast('Erro ao salvar: ' + error.message);
+    let saveError = null;
+
+    // Update each existing goal individually by primary key (avoids any upsert conflict)
+    for (const record of toUpdate) {
+        const { error } = await supabase
+            .from('project_goals')
+            .update({
+                target_amount: record.target_amount,
+                current_amount: record.current_amount
+            })
+            .eq('id', record.id);
+        if (error) { saveError = error; break; }
+    }
+
+    // Insert truly new goals
+    if (!saveError && toInsert.length > 0) {
+        const { error } = await supabase
+            .from('project_goals')
+            .insert(toInsert);
+        if (error) saveError = error;
+    }
+
+    if (saveError) {
+        showToast('Erro ao salvar: ' + saveError.message);
     } else {
         showToast('Salvo com sucesso!');
         loadProjectData(currentProjectId);
