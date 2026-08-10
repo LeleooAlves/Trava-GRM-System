@@ -9,6 +9,8 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 // State
 let currentProjectId = null;
 let projectGoals = {}; // { '0-20': { target: 0, current: 0, id: ... } }
+let currentProjectIsPaused = false;
+let currentProjectPauseMeta = { total_paused_seconds: 0, paused_at: 0 };
 
 // DOM Elements
 const projectSelect = document.getElementById('projectSelect');
@@ -40,6 +42,7 @@ const confirmCancelBtn = document.getElementById('confirmCancel');
 
 async function init() {
     if (!supabase) return;
+    updateProjectControlsVisibility(false);
     await loadProjects();
     await updateAggregateStats();
     setupEventListeners();
@@ -67,7 +70,8 @@ async function loadProjects() {
     const { data, error } = await supabase
         .from('projects')
         .select('*')
-        .eq('status', 'active')
+        .or('status.eq.active,sync_requested_at.is.null')
+        .neq('status', 'archived')
         .order('created_at', { ascending: false });
 
     if (error) {
@@ -223,7 +227,116 @@ async function loadProjectData(projectId) {
         });
     }
 
+    // Load Pause State
+    const pauseMeta = projectGoals['__pause_meta__'];
+    if (pauseMeta) {
+        currentProjectPauseMeta = {
+            total_paused_seconds: Number(pauseMeta.target_amount) || 0,
+            paused_at: Number(pauseMeta.current_amount) || 0
+        };
+        currentProjectIsPaused = Number(pauseMeta.current_amount) > 0;
+    } else {
+        currentProjectPauseMeta = { total_paused_seconds: 0, paused_at: 0 };
+        currentProjectIsPaused = false;
+    }
+    updatePauseUI(currentProjectIsPaused);
+    updateProjectControlsVisibility(true);
+
     updateUI();
+}
+
+function updateProjectControlsVisibility(hasProject) {
+    const wrapper = document.querySelector('.control-panel-wrapper');
+    if (wrapper) {
+        if (hasProject) {
+            wrapper.classList.add('has-project');
+        } else {
+            wrapper.classList.remove('has-project');
+        }
+    }
+
+    const controls = document.querySelectorAll('.project-only-control');
+    controls.forEach(el => {
+        if (hasProject) {
+            el.classList.remove('is-hidden');
+        } else {
+            el.classList.add('is-hidden');
+        }
+    });
+}
+
+function updatePauseUI(isPaused) {
+    const toggleBtn = document.getElementById('togglePauseBtn');
+    const pauseDot = document.getElementById('pauseStatusDot');
+    const pauseText = document.getElementById('pauseBtnText');
+
+    if (!toggleBtn || !pauseDot || !pauseText) return;
+
+    if (isPaused) {
+        toggleBtn.className = 'btn-secondary-outline status-toggle paused';
+        pauseDot.className = 'status-dot-pulse amber';
+        pauseText.textContent = 'PAUSADO';
+    } else {
+        toggleBtn.className = 'btn-secondary-outline status-toggle';
+        pauseDot.className = 'status-dot-pulse green';
+        pauseText.textContent = 'EM ANDAMENTO';
+    }
+}
+
+async function toggleProjectPause() {
+    if (!currentProjectId) {
+        showToast('Selecione um projeto primeiro.');
+        return;
+    }
+
+    const nowEpoch = Math.floor(Date.now() / 1000);
+    const existingMetaGoal = projectGoals['__pause_meta__'];
+
+    if (currentProjectIsPaused) {
+        // Resume project
+        const pausedAt = currentProjectPauseMeta.paused_at || nowEpoch;
+        const elapsed = Math.max(0, nowEpoch - pausedAt);
+        const newTotalPaused = currentProjectPauseMeta.total_paused_seconds + elapsed;
+
+        const goalData = {
+            project_id: currentProjectId,
+            type_key: '__pause_meta__',
+            target_amount: newTotalPaused,
+            current_amount: 0
+        };
+        if (existingMetaGoal && existingMetaGoal.id) goalData.id = existingMetaGoal.id;
+
+        const { error } = await supabase.from('project_goals').upsert([goalData]);
+        if (error) {
+            showToast('Erro ao retomar projeto: ' + error.message);
+        } else {
+            showToast('Projeto retomado (EM ANDAMENTO)!');
+            currentProjectIsPaused = false;
+            currentProjectPauseMeta = { total_paused_seconds: newTotalPaused, paused_at: 0 };
+            updatePauseUI(false);
+            await updateAggregateStats();
+        }
+    } else {
+        // Pause project
+        const goalData = {
+            project_id: currentProjectId,
+            type_key: '__pause_meta__',
+            target_amount: currentProjectPauseMeta.total_paused_seconds,
+            current_amount: nowEpoch
+        };
+        if (existingMetaGoal && existingMetaGoal.id) goalData.id = existingMetaGoal.id;
+
+        const { error } = await supabase.from('project_goals').upsert([goalData]);
+        if (error) {
+            showToast('Erro ao pausar projeto: ' + error.message);
+        } else {
+            showToast('Projeto PAUSADO!');
+            currentProjectIsPaused = true;
+            currentProjectPauseMeta = { total_paused_seconds: currentProjectPauseMeta.total_paused_seconds, paused_at: nowEpoch };
+            updatePauseUI(true);
+            await updateAggregateStats();
+        }
+    }
 }
 
 async function updateETA(newDate) {
@@ -249,9 +362,25 @@ async function finishProject() {
         'Finalizar Projeto',
         'Tem certeza que deseja finalizar este projeto? Ele será movido para a aba "Finalizados".',
         async () => {
+            // If project was paused when finishing, finalize total_paused_seconds
+            if (currentProjectIsPaused) {
+                const nowEpoch = Math.floor(Date.now() / 1000);
+                const elapsed = Math.max(0, nowEpoch - (currentProjectPauseMeta.paused_at || nowEpoch));
+                const newTotalPaused = currentProjectPauseMeta.total_paused_seconds + elapsed;
+                const existingMetaGoal = projectGoals['__pause_meta__'];
+                const goalData = {
+                    project_id: currentProjectId,
+                    type_key: '__pause_meta__',
+                    target_amount: newTotalPaused,
+                    current_amount: 0
+                };
+                if (existingMetaGoal && existingMetaGoal.id) goalData.id = existingMetaGoal.id;
+                await supabase.from('project_goals').upsert([goalData]);
+            }
+
             const { error } = await supabase
                 .from('projects')
-                .update({ status: 'completed' })
+                .update({ status: 'completed', sync_requested_at: new Date().toISOString() })
                 .eq('id', currentProjectId);
 
             if (error) {
@@ -270,6 +399,11 @@ async function finishProject() {
 async function saveGoals() {
     if (!currentProjectId) {
         showToast('Selecione um projeto primeiro.');
+        return;
+    }
+
+    if (currentProjectIsPaused) {
+        showToast('O projeto está PAUSADO. Retome para alterar e salvar as metas.');
         return;
     }
 
@@ -396,6 +530,11 @@ function setupRealtime() {
 function resetUI() {
     currentProjectId = null;
     projectGoals = {};
+    currentProjectIsPaused = false;
+    currentProjectPauseMeta = { total_paused_seconds: 0, paused_at: 0 };
+    updatePauseUI(false);
+    updateProjectControlsVisibility(false);
+
     cardsContainer.innerHTML = '<div class="no-project-selected">Nenhum projeto selecionado.</div>';
 
     const dailyGoalLabel = document.getElementById('dailyGoal');
@@ -414,6 +553,13 @@ function updateUI() {
     // Use sorted types based on db state
     const types = Object.keys(projectGoals).sort((a, b) => (parseInt(a.split('-')[0]) || 0) - (parseInt(b.split('-')[0]) || 0));
 
+    const cardIcons = {
+        '0-20': `<svg viewBox="0 0 24 24" fill="none" stroke="#FA541C" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg>`,
+        '20-50': `<svg viewBox="0 0 24 24" fill="none" stroke="#FA541C" stroke-width="2"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>`,
+        '50-80': `<svg viewBox="0 0 24 24" fill="none" stroke="#FA541C" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3" fill="#FA541C"/></svg>`,
+        '80-100': `<svg viewBox="0 0 24 24" fill="none" stroke="#FA541C" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`
+    };
+
     types.forEach(type => {
         const goal = projectGoals[type] || { target_amount: 0, current_amount: 0, type_key: type };
         const pending = goal.target_amount - goal.current_amount;
@@ -424,43 +570,51 @@ function updateUI() {
         const isCompleted = Number(goal.target_amount) > 0 && Number(goal.current_amount) >= Number(goal.target_amount);
 
         const card = document.createElement('div');
-        card.className = `keyword-card ${isCompleted ? 'completed' : ''}`;
+        card.className = `keyword-card ${isCompleted ? 'completed' : ''} ${currentProjectIsPaused ? 'is-paused' : ''}`;
         card.setAttribute('data-type', type);
 
         const displayType = type === '0-100' ? '0-100%' : type;
+        const iconSvg = cardIcons[type] || cardIcons['80-100'];
+        const disabledAttr = currentProjectIsPaused ? 'disabled' : '';
 
         card.innerHTML = `
-            <div class="card-header">${displayType}</div>
-            <div class="card-body">
-                <div class="progress-container">
-                    <div class="progress-bar" style="width: ${Math.min(100, progress)}%"></div>
+            <div class="card-header-row">
+                <span class="card-title-text">${displayType}</span>
+                <div class="card-badge-circle">
+                    ${iconSvg}
                 </div>
-                <span class="card-percentage">${goal.current_amount}/${goal.target_amount} (${Math.round(progress)}%)</span>
-                
-                <div class="card-stats">
-                    <div class="stat-item">
-                        <span class="stat-value">${goal.target_amount}</span>
-                        <span class="stat-label">Total</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-value" style="color: #4caf50">${goal.current_amount}</span>
-                        <span class="stat-label">Feitos</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-value" style="color: #f44336">${pending}</span>
-                        <span class="stat-label">Pendente</span>
-                    </div>
+            </div>
+            
+            <div class="card-progress-wrapper">
+                <div class="progress-track">
+                    <div class="progress-fill-bar" style="width: ${Math.min(100, progress)}%"></div>
                 </div>
+                <div class="card-percentage-subtext">${Math.round(progress)}% concluído</div>
+            </div>
+            
+            <div class="card-stats-grid">
+                <div class="stat-item-col">
+                    <span class="stat-num-val total">${goal.target_amount}</span>
+                    <span class="stat-sublabel">Total</span>
+                </div>
+                <div class="stat-item-col">
+                    <span class="stat-num-val feitos">${goal.current_amount}</span>
+                    <span class="stat-sublabel">Feitos</span>
+                </div>
+                <div class="stat-item-col">
+                    <span class="stat-num-val pendentes">${pending}</span>
+                    <span class="stat-sublabel">Pendentes</span>
+                </div>
+            </div>
 
-                <div class="card-inputs">
-                    <div class="card-input-group">
-                        <label>Meta</label>
-                        <input type="number" class="goal-input" value="${goal.target_amount}" min="0">
-                    </div>
-                    <div class="card-input-group">
-                        <label>Feito</label>
-                        <input type="number" class="done-input" value="${goal.current_amount}" min="0">
-                    </div>
+            <div class="card-inputs-row">
+                <div class="input-box-group">
+                    <label class="input-box-label">META</label>
+                    <input type="number" class="input-box-field goal-input" value="${goal.target_amount}" min="0" ${disabledAttr}>
+                </div>
+                <div class="input-box-group">
+                    <label class="input-box-label">FEITO</label>
+                    <input type="number" class="input-box-field done-input" value="${goal.current_amount}" min="0" ${disabledAttr}>
                 </div>
             </div>
         `;
@@ -502,13 +656,18 @@ function recalculateTotal() {
         }
 
         // Update stats in place
-        card.querySelector('.stat-item:nth-child(1) .stat-value').textContent = target;
-        card.querySelector('.stat-item:nth-child(2) .stat-value').textContent = done;
-        card.querySelector('.stat-item:nth-child(3) .stat-value').textContent = pending;
+        const totalEl = card.querySelector('.stat-item-col:nth-child(1) .stat-num-val');
+        const doneEl = card.querySelector('.stat-item-col:nth-child(2) .stat-num-val');
+        const pendingEl = card.querySelector('.stat-item-col:nth-child(3) .stat-num-val');
+        if (totalEl) totalEl.textContent = target;
+        if (doneEl) doneEl.textContent = done;
+        if (pendingEl) pendingEl.textContent = pending;
 
         const progress = target > 0 ? (done / target) * 100 : 0;
-        card.querySelector('.progress-bar').style.width = `${Math.min(100, progress)}%`;
-        card.querySelector('.card-percentage').textContent = `${done}/${target} (${Math.round(progress)}%)`;
+        const fillBar = card.querySelector('.progress-fill-bar');
+        const subtext = card.querySelector('.card-percentage-subtext');
+        if (fillBar) fillBar.style.width = `${Math.min(100, progress)}%`;
+        if (subtext) subtext.textContent = `${Math.round(progress)}% concluído`;
 
         total += pending;
     });
@@ -565,13 +724,31 @@ window.openTab = function (evt, tabName) {
     }
 };
 
-// Internal function to init slider position
+// Internal function to init slider position with hover effect ("andar sobre as abas")
 function initNavSlider() {
-    const activeBtn = document.querySelector('.nav-item.active');
+    const navContainer = document.querySelector('.floating-nav-container');
     const slider = document.querySelector('.nav-slider');
-    if (activeBtn && slider) {
-        slider.style.left = activeBtn.offsetLeft + 'px';
-        slider.style.width = activeBtn.offsetWidth + 'px';
+    const navItems = document.querySelectorAll('.nav-item');
+
+    function positionSlider(element) {
+        if (slider && element) {
+            slider.style.left = element.offsetLeft + 'px';
+            slider.style.width = element.offsetWidth + 'px';
+        }
+    }
+
+    const activeBtn = document.querySelector('.nav-item.active');
+    if (activeBtn) positionSlider(activeBtn);
+
+    navItems.forEach(btn => {
+        btn.addEventListener('mouseenter', () => positionSlider(btn));
+    });
+
+    if (navContainer) {
+        navContainer.addEventListener('mouseleave', () => {
+            const currentActive = document.querySelector('.nav-item.active');
+            if (currentActive) positionSlider(currentActive);
+        });
     }
 }
 
@@ -587,6 +764,7 @@ async function loadCompletedProjects(searchTerm = '') {
         .from('projects')
         .select('*')
         .eq('status', 'completed')
+        .not('sync_requested_at', 'is', null)
         .order('created_at', { ascending: false });
 
     if (searchTerm) {
@@ -852,8 +1030,11 @@ async function saveAccess() {
 
 // Reuse existing updateAggregateStats code...
 async function updateAggregateStats() {
-    // 1. Total Keywords (current_amount summed across all goals)
-    const { data: goals, error: ge } = await supabase.from('project_goals').select('current_amount');
+    // 1. Total Keywords (current_amount summed across all non-system goals)
+    const { data: goals, error: ge } = await supabase
+        .from('project_goals')
+        .select('type_key, current_amount')
+        .neq('type_key', '__pause_meta__');
     const totalKW = goals ? goals.reduce((acc, g) => acc + (g.current_amount || 0), 0) : 0;
 
     // 2. Projects Adicionados (Total count of active + completed projects)
@@ -862,9 +1043,61 @@ async function updateAggregateStats() {
     // 3. Projects Finalizados (count of 'completed')
     const { count: totalFinished, error: fe } = await supabase.from('projects').select('*', { count: 'exact', head: true }).eq('status', 'completed');
 
+    // 4. Average Active Completion Time (Excluding Pauses)
+    const { data: completedProjects } = await supabase
+        .from('projects')
+        .select('id, created_at, sync_requested_at')
+        .eq('status', 'completed');
+
+    const { data: pauseGoals } = await supabase
+        .from('project_goals')
+        .select('project_id, target_amount, current_amount')
+        .eq('type_key', '__pause_meta__');
+
+    let totalActiveSeconds = 0;
+    let validCount = 0;
+
+    if (completedProjects && completedProjects.length > 0) {
+        completedProjects.forEach(p => {
+            if (!p.created_at) return;
+            const createdMs = new Date(p.created_at).getTime();
+            const completedMs = p.sync_requested_at ? new Date(p.sync_requested_at).getTime() : createdMs;
+            const grossSeconds = Math.max(0, (completedMs - createdMs) / 1000);
+
+            const pauseMeta = pauseGoals ? pauseGoals.find(g => g.project_id === p.id) : null;
+            let pausedSeconds = pauseMeta ? Number(pauseMeta.target_amount || 0) : 0;
+            if (pauseMeta && Number(pauseMeta.current_amount) > 0) {
+                const nowEpoch = Math.floor(Date.now() / 1000);
+                pausedSeconds += Math.max(0, nowEpoch - Number(pauseMeta.current_amount));
+            }
+
+            const netActiveSeconds = Math.max(0, grossSeconds - pausedSeconds);
+            totalActiveSeconds += netActiveSeconds;
+            validCount++;
+        });
+    }
+
+    const avgSeconds = validCount > 0 ? totalActiveSeconds / validCount : 0;
+
     if (totalKeywordsDoneEl) totalKeywordsDoneEl.textContent = totalKW.toLocaleString();
     if (document.getElementById('totalProjectsAdded')) document.getElementById('totalProjectsAdded').textContent = `${totalAdded || 0} adicionados`;
     if (document.getElementById('totalProjectsFinished')) document.getElementById('totalProjectsFinished').textContent = `${totalFinished || 0} feitos`;
+    if (document.getElementById('avgCompletionTime')) document.getElementById('avgCompletionTime').textContent = formatDuration(avgSeconds);
+}
+
+function formatDuration(totalSec) {
+    if (!totalSec || totalSec <= 0) return '0m';
+    const days = Math.floor(totalSec / 86400);
+    const hours = Math.floor((totalSec % 86400) / 3600);
+    const minutes = Math.floor((totalSec % 3600) / 60);
+
+    if (days > 0) {
+        return `${days}d ${hours}h`;
+    } else if (hours > 0) {
+        return `${hours}h ${minutes}m`;
+    } else {
+        return `${minutes}m`;
+    }
 }
 
 
@@ -875,15 +1108,25 @@ function setupEventListeners() {
 
     createProjectBtn.addEventListener('click', () => newProjectModal.style.display = 'block');
     closeModalSpan.addEventListener('click', () => newProjectModal.style.display = 'none');
+    const cancelCreateProjectBtn = document.getElementById('cancelCreateProjectBtn');
+    if (cancelCreateProjectBtn) cancelCreateProjectBtn.addEventListener('click', () => newProjectModal.style.display = 'none');
+
+    const togglePauseBtn = document.getElementById('togglePauseBtn');
+    if (togglePauseBtn) togglePauseBtn.addEventListener('click', toggleProjectPause);
+
     const manageAccessBtn = document.getElementById('manageAccessBtn');
     if (manageAccessBtn) manageAccessBtn.addEventListener('click', openAccessModal);
 
     const editTypeBtn = document.getElementById('editTypeBtn');
     if (editTypeBtn) editTypeBtn.addEventListener('click', openEditTypeModal);
     if (closeEditTypeSpan) closeEditTypeSpan.addEventListener('click', () => editTypeModal.style.display = 'none');
+    const cancelEditTypeBtn = document.getElementById('cancelEditTypeBtn');
+    if (cancelEditTypeBtn) cancelEditTypeBtn.addEventListener('click', () => editTypeModal.style.display = 'none');
     if (saveEditTypeBtn) saveEditTypeBtn.addEventListener('click', saveEditType);
 
     if (closeAccessSpan) closeAccessSpan.addEventListener('click', () => accessControlModal.style.display = 'none');
+    const cancelAccessBtn = document.getElementById('cancelAccessBtn');
+    if (cancelAccessBtn) cancelAccessBtn.addEventListener('click', () => accessControlModal.style.display = 'none');
     if (saveAccessBtn) saveAccessBtn.addEventListener('click', saveAccess);
 
     window.addEventListener('click', (e) => {

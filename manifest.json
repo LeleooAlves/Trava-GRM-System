@@ -1,0 +1,23 @@
+{
+  "name": "Keywords GRM - Sistema de Controle",
+  "short_name": "Keywords GRM",
+  "description": "Sistema de controle e acompanhamento de projetos Keywords GRM",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#FA541C",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "favicon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
