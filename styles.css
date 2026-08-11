@@ -159,13 +159,13 @@ html, body {
     stroke: var(--primary-orange);
 }
 
-/* Header Right Shopee Badge */
+/* Header Right Badge */
 .header-right {
     display: flex;
     align-items: center;
 }
 
-.shopee-badge-container {
+.partner-badge-container {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -175,7 +175,7 @@ html, body {
     transition: transform 0.2s;
 }
 
-.shopee-badge-container:hover {
+.partner-badge-container:hover {
     transform: scale(1.03);
 }
 
