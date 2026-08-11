@@ -38,10 +38,92 @@ const confirmMessageEl = document.getElementById('confirmMessage');
 const confirmOkBtn = document.getElementById('confirmOk');
 const confirmCancelBtn = document.getElementById('confirmCancel');
 
+// Group Settings State
+const SETTINGS_KEY = 'grm_group_settings';
+let groupSettings = {
+    esporadico: [],
+    fixo: []
+};
+
+function loadGroupSettings() {
+    try {
+        const saved = localStorage.getItem(SETTINGS_KEY);
+        if (saved) {
+            groupSettings = JSON.parse(saved);
+        }
+    } catch (e) {
+        console.error('Error loading group settings:', e);
+    }
+    updateSettingsUI();
+}
+
+function saveGroupSettings() {
+    const esporadicoText = document.getElementById('settingsEsporadicoEmails').value;
+    const fixoText = document.getElementById('settingsFixoEmails').value;
+
+    const esporadicoEmails = esporadicoText
+        .split(/[\n,;]+/)
+        .map(e => e.trim().toLowerCase())
+        .filter(e => e);
+
+    const fixoEmails = fixoText
+        .split(/[\n,;]+/)
+        .map(e => e.trim().toLowerCase())
+        .filter(e => e);
+
+    groupSettings = {
+        esporadico: esporadicoEmails,
+        fixo: fixoEmails
+    };
+
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(groupSettings));
+    updateSettingsUI();
+    showToast('Configurações de grupos salvas com sucesso! ⚙️');
+}
+
+function updateSettingsUI() {
+    const esporadicoTextarea = document.getElementById('settingsEsporadicoEmails');
+    const fixoTextarea = document.getElementById('settingsFixoEmails');
+    const esporadicoBadge = document.getElementById('esporadicoCountBadge');
+    const fixoBadge = document.getElementById('fixoCountBadge');
+
+    if (esporadicoTextarea && document.activeElement !== esporadicoTextarea) {
+        esporadicoTextarea.value = (groupSettings.esporadico || []).join('\n');
+    }
+    if (fixoTextarea && document.activeElement !== fixoTextarea) {
+        fixoTextarea.value = (groupSettings.fixo || []).join('\n');
+    }
+
+    if (esporadicoBadge) {
+        esporadicoBadge.textContent = `${(groupSettings.esporadico || []).length} Agentes`;
+    }
+    if (fixoBadge) {
+        fixoBadge.textContent = `${(groupSettings.fixo || []).length} Agentes`;
+    }
+}
+
+function autoFillNewProjectEmails() {
+    const webhookSelect = document.getElementById('newProjectWebhook');
+    const emailsTextarea = document.getElementById('projectEmails');
+    if (!webhookSelect || !emailsTextarea) return;
+
+    const val = webhookSelect.value;
+    if (val === 'none') {
+        emailsTextarea.value = '';
+    } else if (val.includes('1442949842820141281') || val === 'esporadico') {
+        emailsTextarea.value = (groupSettings.esporadico || []).join('\n');
+    } else if (val.includes('1442947625715368067') || val === 'fixo') {
+        emailsTextarea.value = (groupSettings.fixo || []).join('\n');
+    } else {
+        emailsTextarea.value = '';
+    }
+}
+
 // --- Initialization ---
 
 async function init() {
     if (!supabase) return;
+    loadGroupSettings();
     updateProjectControlsVisibility(false);
     await loadProjects();
     await updateAggregateStats();
@@ -70,8 +152,7 @@ async function loadProjects() {
     const { data, error } = await supabase
         .from('projects')
         .select('*')
-        .or('status.eq.active,sync_requested_at.is.null')
-        .neq('status', 'archived')
+        .eq('status', 'active')
         .order('created_at', { ascending: false });
 
     if (error) {
@@ -267,19 +348,21 @@ function updateProjectControlsVisibility(hasProject) {
 
 function updatePauseUI(isPaused) {
     const toggleBtn = document.getElementById('togglePauseBtn');
-    const pauseDot = document.getElementById('pauseStatusDot');
-    const pauseText = document.getElementById('pauseBtnText');
+    const pauseIcon = document.getElementById('pauseIconSvg');
+    const playIcon = document.getElementById('playIconSvg');
 
-    if (!toggleBtn || !pauseDot || !pauseText) return;
+    if (!toggleBtn) return;
 
     if (isPaused) {
-        toggleBtn.className = 'btn-secondary-outline status-toggle paused';
-        pauseDot.className = 'status-dot-pulse amber';
-        pauseText.textContent = 'PAUSADO';
+        toggleBtn.className = 'icon-btn-action pause status-toggle project-only-control paused';
+        toggleBtn.title = 'Retomar Projeto (Pausado)';
+        if (pauseIcon) pauseIcon.classList.add('is-hidden');
+        if (playIcon) playIcon.classList.remove('is-hidden');
     } else {
-        toggleBtn.className = 'btn-secondary-outline status-toggle';
-        pauseDot.className = 'status-dot-pulse green';
-        pauseText.textContent = 'EM ANDAMENTO';
+        toggleBtn.className = 'icon-btn-action pause status-toggle project-only-control running';
+        toggleBtn.title = 'Pausar Projeto (Em Andamento)';
+        if (pauseIcon) pauseIcon.classList.remove('is-hidden');
+        if (playIcon) playIcon.classList.add('is-hidden');
     }
 }
 
@@ -550,8 +633,10 @@ function updateUI() {
     cardsContainer.innerHTML = '';
     let totalPending = 0;
 
-    // Use sorted types based on db state
-    const types = Object.keys(projectGoals).sort((a, b) => (parseInt(a.split('-')[0]) || 0) - (parseInt(b.split('-')[0]) || 0));
+    // Filter out internal metadata keys starting with __ (e.g. __pause_meta__)
+    const types = Object.keys(projectGoals)
+        .filter(type => !type.startsWith('__'))
+        .sort((a, b) => (parseInt(a.split('-')[0]) || 0) - (parseInt(b.split('-')[0]) || 0));
 
     const cardIcons = {
         '0-20': `<svg viewBox="0 0 24 24" fill="none" stroke="#FA541C" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg>`,
@@ -562,7 +647,7 @@ function updateUI() {
 
     types.forEach(type => {
         const goal = projectGoals[type] || { target_amount: 0, current_amount: 0, type_key: type };
-        const pending = goal.target_amount - goal.current_amount;
+        const pending = Math.max(0, goal.target_amount - goal.current_amount);
         const progress = goal.target_amount > 0 ? (goal.current_amount / goal.target_amount) * 100 : 0;
 
         totalPending += pending;
@@ -579,7 +664,15 @@ function updateUI() {
 
         card.innerHTML = `
             <div class="card-header-row">
-                <span class="card-title-text">${displayType}</span>
+                <div class="card-title-group">
+                    <span class="card-title-text">${displayType}</span>
+                    <button class="delete-type-btn" title="Excluir Categoria ${displayType}" data-type-key="${type}">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                            <polyline points="3 6 5 6 21 6"/>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                        </svg>
+                    </button>
+                </div>
                 <div class="card-badge-circle">
                     ${iconSvg}
                 </div>
@@ -618,8 +711,32 @@ function updateUI() {
                 </div>
             </div>
         `;
+
+        const delBtn = card.querySelector('.delete-type-btn');
+        if (delBtn) {
+            delBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                deleteTypeGoal(type);
+            });
+        }
+
         cardsContainer.appendChild(card);
     });
+
+    // Add "+ Adicionar Categoria" card at the end of grid
+    const addCard = document.createElement('div');
+    addCard.className = 'add-type-card';
+    addCard.innerHTML = `
+        <div class="add-type-icon-box">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="24" height="24">
+                <line x1="12" y1="5" x2="12" y2="19"/>
+                <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+        </div>
+        <span class="add-type-label">Adicionar Categoria</span>
+    `;
+    addCard.addEventListener('click', openAddTypeModal);
+    cardsContainer.appendChild(addCard);
 
     const dailyGoalLabel = document.getElementById('dailyGoal');
     const totalPendingLabel = document.getElementById('totalPendingDisplay');
@@ -764,7 +881,6 @@ async function loadCompletedProjects(searchTerm = '') {
         .from('projects')
         .select('*')
         .eq('status', 'completed')
-        .not('sync_requested_at', 'is', null)
         .order('created_at', { ascending: false });
 
     if (searchTerm) {
@@ -1106,7 +1222,19 @@ function formatDuration(totalSec) {
 function setupEventListeners() {
     projectSelect.addEventListener('change', (e) => loadProjectData(e.target.value));
 
-    createProjectBtn.addEventListener('click', () => newProjectModal.style.display = 'block');
+    createProjectBtn.addEventListener('click', () => {
+        newProjectModal.style.display = 'block';
+        autoFillNewProjectEmails();
+    });
+    if (newProjectWebhookSelect) {
+        newProjectWebhookSelect.addEventListener('change', autoFillNewProjectEmails);
+    }
+
+    const saveSettingsBtn = document.getElementById('saveSettingsBtn');
+    if (saveSettingsBtn) {
+        saveSettingsBtn.addEventListener('click', saveGroupSettings);
+    }
+
     closeModalSpan.addEventListener('click', () => newProjectModal.style.display = 'none');
     const cancelCreateProjectBtn = document.getElementById('cancelCreateProjectBtn');
     if (cancelCreateProjectBtn) cancelCreateProjectBtn.addEventListener('click', () => newProjectModal.style.display = 'none');
@@ -1129,10 +1257,36 @@ function setupEventListeners() {
     if (cancelAccessBtn) cancelAccessBtn.addEventListener('click', () => accessControlModal.style.display = 'none');
     if (saveAccessBtn) saveAccessBtn.addEventListener('click', saveAccess);
 
+    const fillEsporadicoAccessBtn = document.getElementById('fillEsporadicoAccessBtn');
+    if (fillEsporadicoAccessBtn) {
+        fillEsporadicoAccessBtn.addEventListener('click', () => {
+            const editEmailsTextarea = document.getElementById('editProjectEmails');
+            if (editEmailsTextarea) editEmailsTextarea.value = (groupSettings.esporadico || []).join('\n');
+        });
+    }
+
+    const fillFixoAccessBtn = document.getElementById('fillFixoAccessBtn');
+    if (fillFixoAccessBtn) {
+        fillFixoAccessBtn.addEventListener('click', () => {
+            const editEmailsTextarea = document.getElementById('editProjectEmails');
+            if (editEmailsTextarea) editEmailsTextarea.value = (groupSettings.fixo || []).join('\n');
+        });
+    }
+
+    const addTypeModal = document.getElementById('addTypeModal');
+    const closeAddTypeBtn = document.querySelector('.close-add-type');
+    const cancelAddTypeBtn = document.getElementById('cancelAddTypeBtn');
+    const saveAddTypeBtn = document.getElementById('saveAddTypeBtn');
+
+    if (closeAddTypeBtn) closeAddTypeBtn.addEventListener('click', closeAddTypeModal);
+    if (cancelAddTypeBtn) cancelAddTypeBtn.addEventListener('click', closeAddTypeModal);
+    if (saveAddTypeBtn) saveAddTypeBtn.addEventListener('click', confirmAddType);
+
     window.addEventListener('click', (e) => {
         if (e.target == newProjectModal) newProjectModal.style.display = 'none';
         if (e.target == accessControlModal) accessControlModal.style.display = 'none';
         if (e.target == editTypeModal) editTypeModal.style.display = 'none';
+        if (e.target == addTypeModal) closeAddTypeModal();
     });
 
     confirmCreateProjectBtn.addEventListener('click', () => createProject(newProjectNameInput.value));
@@ -1418,6 +1572,107 @@ function calculateAndCopyWorkload() {
         console.error('Erro ao copiar', err);
         showToast('Erro ao copiar texto.');
     });
+}
+
+function openAddTypeModal() {
+    if (!currentProjectId) {
+        showToast('Selecione um projeto primeiro.');
+        return;
+    }
+    const modal = document.getElementById('addTypeModal');
+    const typeInput = document.getElementById('newTypeNameInput');
+    const targetInput = document.getElementById('newTypeTargetInput');
+    if (typeInput) typeInput.value = '';
+    if (targetInput) targetInput.value = '0';
+    if (modal) modal.style.display = 'block';
+}
+
+function closeAddTypeModal() {
+    const modal = document.getElementById('addTypeModal');
+    if (modal) modal.style.display = 'none';
+}
+
+async function confirmAddType() {
+    if (!currentProjectId) {
+        showToast('Selecione um projeto primeiro.');
+        closeAddTypeModal();
+        return;
+    }
+
+    const typeInput = document.getElementById('newTypeNameInput');
+    const targetInput = document.getElementById('newTypeTargetInput');
+
+    const rawType = typeInput.value.trim();
+    if (!rawType) {
+        showToast('Informe o nome da categoria.');
+        return;
+    }
+
+    if (rawType.startsWith('__')) {
+        showToast('Nome de categoria reservado.');
+        return;
+    }
+
+    const targetAmount = parseInt(targetInput.value) || 0;
+
+    const goalData = {
+        project_id: currentProjectId,
+        type_key: rawType,
+        target_amount: targetAmount,
+        current_amount: 0
+    };
+
+    const existing = projectGoals[rawType];
+    if (existing && existing.id) {
+        goalData.id = existing.id;
+    }
+
+    const { data, error } = await supabase
+        .from('project_goals')
+        .upsert([goalData])
+        .select();
+
+    if (error) {
+        showToast('Erro ao adicionar categoria: ' + error.message);
+    } else {
+        if (data && data[0]) {
+            projectGoals[rawType] = data[0];
+        } else {
+            projectGoals[rawType] = goalData;
+        }
+        closeAddTypeModal();
+        updateUI();
+        updateAggregateStats();
+        showToast(`Categoria "${rawType}" adicionada!`);
+    }
+}
+
+async function deleteTypeGoal(typeKey) {
+    if (!currentProjectId) return;
+
+    showConfirm(
+        'Excluir Categoria',
+        `Tem certeza que deseja excluir a categoria "${typeKey}" deste projeto?`,
+        async () => {
+            const goal = projectGoals[typeKey];
+            if (goal && goal.id) {
+                const { error } = await supabase
+                    .from('project_goals')
+                    .delete()
+                    .eq('id', goal.id);
+
+                if (error) {
+                    showToast('Erro ao excluir categoria: ' + error.message);
+                    return;
+                }
+            }
+
+            delete projectGoals[typeKey];
+            updateUI();
+            updateAggregateStats();
+            showToast(`Categoria "${typeKey}" excluída!`);
+        }
+    );
 }
 
 // Run

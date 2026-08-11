@@ -15,8 +15,8 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Keywords GRM">
-  <script type="module" crossorigin src="/assets/index-BcPc7k39.js"></script>
-  <link rel="stylesheet" crossorigin href="/assets/index-n0QVfvIO.css">
+  <script type="module" crossorigin src="/assets/index-CRdwNsah.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-D63eWDOU.css">
 </head>
 
 <body>
@@ -56,6 +56,13 @@
                     </svg>
                     Finalizados
                 </button>
+                <button class="nav-item" onclick="openTab(event, 'tab-settings')">
+                    <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                    </svg>
+                    Configurações
+                </button>
             </nav>
 
             <div class="header-right">
@@ -77,59 +84,64 @@
             <div id="tab-progress" class="tab-content active">
                 <div class="control-panel-wrapper">
                     <div class="control-panel-left-section">
-                        <div class="config-field">
-                            <label class="field-label">E.T.A</label>
-                            <div class="input-icon-wrapper">
-                                <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                                    <line x1="16" y1="2" x2="16" y2="6"/>
-                                    <line x1="8" y1="2" x2="8" y2="6"/>
-                                    <line x1="3" y1="10" x2="21" y2="10"/>
-                                </svg>
-                                <input type="date" id="eta-input" class="modern-input-field">
-                            </div>
+                        <div class="left-section-header">
+                            <span class="left-section-title">INFORMAÇÕES DO PROJETO</span>
                         </div>
-
-                        <div class="config-field">
-                            <label class="field-label">EQUIPE</label>
-                            <div class="input-icon-wrapper">
-                                <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                                    <circle cx="9" cy="7" r="4"/>
-                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                                </svg>
-                                <input type="number" id="peopleInput" value="1" min="1" class="modern-input-field small-num">
-                                <button id="copyWorkloadBtn" class="field-subtle-btn" title="Copiar Divisão">📋</button>
+                        <div class="left-fields-row">
+                            <div class="config-field">
+                                <label class="field-label">E.T.A</label>
+                                <div class="input-icon-wrapper">
+                                    <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                                        <line x1="16" y1="2" x2="16" y2="6"/>
+                                        <line x1="8" y1="2" x2="8" y2="6"/>
+                                        <line x1="3" y1="10" x2="21" y2="10"/>
+                                    </svg>
+                                    <input type="date" id="eta-input" class="modern-input-field">
+                                </div>
                             </div>
-                        </div>
 
-                        <div class="config-field flex-grow-select">
-                            <label class="field-label">PROJETO</label>
-                            <div class="input-icon-wrapper">
-                                <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-                                </svg>
-                                <select id="projectSelect" class="modern-select-field">
-                                    <option value="">Selecione um projeto</option>
-                                </select>
+                            <div class="config-field">
+                                <label class="field-label">EQUIPE</label>
+                                <div class="input-icon-wrapper">
+                                    <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                                        <circle cx="9" cy="7" r="4"/>
+                                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                                        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                                    </svg>
+                                    <input type="number" id="peopleInput" value="1" min="1" class="modern-input-field small-num">
+                                    <button id="copyWorkloadBtn" class="field-subtle-btn" title="Copiar Divisão">📋</button>
+                                </div>
                             </div>
-                        </div>
 
-                        <div class="action-icon-buttons project-only-control">
-                            <button id="manageAccessBtn" class="icon-btn-square" title="Gerenciar Acesso">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                                    <circle cx="8.5" cy="7" r="4"/>
-                                    <polyline points="17 11 19 13 23 9"/>
-                                </svg>
-                            </button>
-                            <button id="editTypeBtn" class="icon-btn-square" title="Alterar Tipo do Projeto">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <circle cx="12" cy="12" r="3"/>
-                                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-                                </svg>
-                            </button>
+                            <div class="config-field flex-grow-select">
+                                <label class="field-label">PROJETO</label>
+                                <div class="input-icon-wrapper">
+                                    <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                                    </svg>
+                                    <select id="projectSelect" class="modern-select-field">
+                                        <option value="">Selecione um projeto</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="action-icon-buttons project-only-control">
+                                <button id="manageAccessBtn" class="icon-btn-square" title="Gerenciar Acesso">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                                        <circle cx="8.5" cy="7" r="4"/>
+                                        <polyline points="17 11 19 13 23 9"/>
+                                    </svg>
+                                </button>
+                                <button id="editTypeBtn" class="icon-btn-square" title="Alterar Tipo do Projeto">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="12" cy="12" r="3"/>
+                                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
                     </div>
 
@@ -152,32 +164,37 @@
                             </div>
                         </div>
 
-                        <div class="right-action-cluster">
-                            <button id="createProjectBtn" class="btn-novo-projeto">
-                                <span>+</span> Novo Projeto
+                        <div class="right-icon-row">
+                            <button id="createProjectBtn" class="icon-btn-action create" title="Novo Projeto">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="20" height="20">
+                                    <line x1="12" y1="5" x2="12" y2="19"/>
+                                    <line x1="5" y1="12" x2="19" y2="12"/>
+                                </svg>
                             </button>
 
-                            <button id="togglePauseBtn" class="btn-secondary-outline status-toggle full-width-toggle project-only-control">
-                                <span id="pauseStatusDot" class="status-dot-pulse green"></span>
-                                <span id="pauseBtnText">EM ANDAMENTO</span>
+                            <button id="togglePauseBtn" class="icon-btn-action pause status-toggle project-only-control" title="Pausar / Retomar Projeto">
+                                <svg id="pauseIconSvg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+                                    <rect x="6" y="4" width="4" height="16" rx="1"/>
+                                    <rect x="14" y="4" width="4" height="16" rx="1"/>
+                                </svg>
+                                <svg id="playIconSvg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" class="is-hidden">
+                                    <polygon points="5 3 19 12 5 21 5 3"/>
+                                </svg>
                             </button>
 
-                            <div class="secondary-actions-row project-only-control">
-                                <button id="finishProjectBtn" class="btn-secondary-outline finish">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-                                        <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
-                                        <line x1="4" y1="22" x2="4" y2="15"/>
-                                    </svg>
-                                    Finalizar Projeto
-                                </button>
-                                <button id="deleteActiveProjectBtn" class="btn-secondary-outline delete">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
-                                        <polyline points="3 6 5 6 21 6"/>
-                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                                    </svg>
-                                    Apagar Projeto
-                                </button>
-                            </div>
+                            <button id="finishProjectBtn" class="icon-btn-action finish project-only-control" title="Finalizar Projeto">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                                    <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
+                                    <line x1="4" y1="22" x2="4" y2="15"/>
+                                </svg>
+                            </button>
+
+                            <button id="deleteActiveProjectBtn" class="icon-btn-action delete project-only-control" title="Apagar Projeto">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                                    <polyline points="3 6 5 6 21 6"/>
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                </svg>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -269,6 +286,66 @@
                 </div>
                 <div id="completedProjectsContainer" class="completed-grid-modern">
                     <!-- Projects with details will be rendered here -->
+                </div>
+            </div>
+
+            <!-- Settings (Configurações) Content -->
+            <div id="tab-settings" class="tab-content">
+                <div class="settings-container">
+                    <div class="settings-header">
+                        <h2 class="settings-title">Configurações de Grupos e Agentes</h2>
+                        <p class="settings-subtitle">Configure os e-mails padrões de cada grupo para preenchimento automático em novos projetos</p>
+                    </div>
+
+                    <div class="settings-grid">
+                        <!-- Grupo Esporádico Card -->
+                        <div class="settings-card">
+                            <div class="settings-card-header">
+                                <div class="settings-group-badge esporadico">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                                        <circle cx="9" cy="7" r="4"/>
+                                    </svg>
+                                    Grupo Esporádico
+                                </div>
+                                <span id="esporadicoCountBadge" class="count-pill">0 Agentes</span>
+                            </div>
+                            <div class="settings-card-body">
+                                <label class="settings-field-label">E-MAILS PADRÕES DO GRUPO ESPORÁDICO</label>
+                                <textarea id="settingsEsporadicoEmails" class="settings-textarea" rows="6" placeholder="Insira os e-mails dos agentes (um por linha ou por vírgula)"></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Grupo GRM Fixo Card -->
+                        <div class="settings-card">
+                            <div class="settings-card-header">
+                                <div class="settings-group-badge fixo">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                                        <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                                        <circle cx="8.5" cy="7" r="4"/>
+                                        <polyline points="17 11 19 13 23 9"/>
+                                    </svg>
+                                    Grupo GRM Fixo
+                                </div>
+                                <span id="fixoCountBadge" class="count-pill">0 Agentes</span>
+                            </div>
+                            <div class="settings-card-body">
+                                <label class="settings-field-label">E-MAILS PADRÕES DO GRUPO GRM FIXO</label>
+                                <textarea id="settingsFixoEmails" class="settings-textarea" rows="6" placeholder="Insira os e-mails dos agentes (um por linha ou por vírgula)"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="settings-actions-footer">
+                        <button id="saveSettingsBtn" class="btn-save-settings">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                                <polyline points="17 21 17 13 7 13 7 21"/>
+                                <polyline points="7 3 7 8 15 8"/>
+                            </svg>
+                            Salvar Configurações
+                        </button>
+                    </div>
                 </div>
             </div>
         </main>
@@ -402,7 +479,13 @@
             </div>
             <div class="modal-body-content">
                 <div class="modal-field">
-                    <label class="modal-label">E-MAILS AUTORIZADOS</label>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <label class="modal-label" style="margin-bottom: 0;">E-MAILS AUTORIZADOS</label>
+                        <div style="display: flex; gap: 8px;">
+                            <button type="button" id="fillEsporadicoAccessBtn" class="btn-quick-fill">Usar Grupo Esporádico</button>
+                            <button type="button" id="fillFixoAccessBtn" class="btn-quick-fill">Usar GRM Fixo</button>
+                        </div>
+                    </div>
                     <textarea id="editProjectEmails" class="modal-textarea" rows="5" placeholder="um por linha ou separados por vírgula"></textarea>
                 </div>
             </div>
@@ -443,6 +526,41 @@
             <div class="modal-footer-actions">
                 <button id="cancelEditTypeBtn" class="modal-btn-cancel">Cancelar</button>
                 <button id="saveEditTypeBtn" class="modal-btn-confirm danger">Alterar e Zerar Metas</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Type Modal -->
+    <div id="addTypeModal" class="modal">
+        <div class="modal-dialog">
+            <div class="modal-header-banner">
+                <div class="modal-title-row">
+                    <div class="modal-icon-badge">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#FA541C" stroke-width="2" width="22" height="22">
+                            <line x1="12" y1="5" x2="12" y2="19"/>
+                            <line x1="5" y1="12" x2="19" y2="12"/>
+                        </svg>
+                    </div>
+                    <div class="modal-title-group">
+                        <h3 class="modal-title">Adicionar Categoria</h3>
+                        <span class="modal-subtitle">Adicione uma nova categoria de meta para este projeto</span>
+                    </div>
+                </div>
+                <button class="modal-close-btn close-add-type">&times;</button>
+            </div>
+            <div class="modal-body-content">
+                <div class="modal-field">
+                    <label class="modal-label">NOME DA CATEGORIA (EX: 0-10%, 0-20, 20-50)</label>
+                    <input type="text" id="newTypeNameInput" class="modal-input" placeholder="Ex: 0-10%">
+                </div>
+                <div class="modal-field" style="margin-top: 16px;">
+                    <label class="modal-label">META INICIAL (TOTAL)</label>
+                    <input type="number" id="newTypeTargetInput" class="modal-input" value="0" min="0">
+                </div>
+            </div>
+            <div class="modal-footer-actions">
+                <button id="cancelAddTypeBtn" class="modal-btn-cancel">Cancelar</button>
+                <button id="saveAddTypeBtn" class="modal-btn-confirm">Adicionar Categoria</button>
             </div>
         </div>
     </div>
