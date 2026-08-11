@@ -914,21 +914,39 @@ async function loadCompletedProjects(searchTerm = '') {
         const card = document.createElement('div');
         card.className = 'completed-card-modern';
 
-        // Header with Name and Delete
+        // Header with Name, Revert, and Delete
         const header = document.createElement('div');
         header.className = 'card-header-modern';
 
         const title = document.createElement('h4');
         title.textContent = project.name;
 
+        const actionsGroup = document.createElement('div');
+        actionsGroup.className = 'completed-card-actions';
+
+        const restoreBtn = document.createElement('button');
+        restoreBtn.className = 'restore-btn-modern';
+        restoreBtn.innerHTML = `
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                <path d="M3 3v5h5"/>
+            </svg>
+            <span>Reverter</span>
+        `;
+        restoreBtn.title = 'Reverter projeto de volta para Em Andamento';
+        restoreBtn.onclick = () => revertProject(project.id, project.name);
+
         const delBtn = document.createElement('button');
         delBtn.className = 'trash-btn-modern';
-        delBtn.innerHTML = '🗑️'; // Can be SVG or icon font
+        delBtn.innerHTML = '🗑️';
         delBtn.title = 'Excluir registro';
         delBtn.onclick = () => deleteProject(project.id);
 
+        actionsGroup.appendChild(restoreBtn);
+        actionsGroup.appendChild(delBtn);
+
         header.appendChild(title);
-        header.appendChild(delBtn);
+        header.appendChild(actionsGroup);
 
         // Details Section (Mini-stats)
         const details = document.createElement('div');
@@ -955,6 +973,48 @@ async function loadCompletedProjects(searchTerm = '') {
         card.appendChild(details);
         listContainer.appendChild(card);
     });
+}
+
+async function revertProject(projectId, projectName) {
+    showConfirm(
+        'Reverter Projeto',
+        `Tem certeza que deseja reverter o projeto "${projectName}" de volta para a aba "Em Andamento"?`,
+        async () => {
+            const { error } = await supabase
+                .from('projects')
+                .update({ status: 'active' })
+                .eq('id', projectId);
+
+            if (error) {
+                console.error('Error reverting project:', error);
+                showToast('Erro ao reverter projeto: ' + error.message);
+                return;
+            }
+
+            showToast(`Projeto "${projectName}" revertido com sucesso! ↩️`);
+            
+            // Reload active projects
+            await loadProjects();
+
+            // Select the reverted project in projectSelect dropdown
+            if (projectSelect) {
+                projectSelect.value = projectId;
+                await loadProjectData(projectId);
+            }
+
+            // Reload completed list
+            const searchEl = document.getElementById('completedSearch');
+            loadCompletedProjects(searchEl ? searchEl.value : '');
+
+            // Switch to Andamento tab
+            const progressTabBtn = document.querySelector('.nav-item[onclick*="tab-progress"]');
+            if (progressTabBtn) {
+                progressTabBtn.click();
+            }
+
+            await updateAggregateStats();
+        }
+    );
 }
 
 async function deleteProject(projectId) {
@@ -1308,6 +1368,27 @@ function setupEventListeners() {
     }
 
     saveGoalsBtn.addEventListener('click', saveGoals);
+
+    // Global Keyboard Shortcuts
+    // CTRL + B = Salvar Metas
+    // CTRL + X = Novo Projeto
+    window.addEventListener('keydown', (e) => {
+        const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+        if (isCtrlOrCmd) {
+            const key = e.key.toLowerCase();
+            if (key === 'b') {
+                e.preventDefault();
+                if (saveGoalsBtn) {
+                    saveGoalsBtn.click();
+                }
+            } else if (key === 'x') {
+                e.preventDefault();
+                if (createProjectBtn) {
+                    createProjectBtn.click();
+                }
+            }
+        }
+    });
 
     const etaInput = document.getElementById('eta-input');
     if (etaInput) {

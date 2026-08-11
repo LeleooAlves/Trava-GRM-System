@@ -1963,3 +1963,32 @@ html, body {
     color: var(--primary-orange);
     border-color: #ffd8cc;
 }
+
+/* Completed Card Actions & Revert Button */
+.completed-card-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.restore-btn-modern {
+    background-color: #f0fdf4;
+    color: #16a34a;
+    border: 1px solid #bbf7d0;
+    border-radius: 8px;
+    padding: 5px 10px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.2s;
+}
+
+.restore-btn-modern:hover {
+    background-color: #dcfce7;
+    border-color: #86efac;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(22, 163, 74, 0.15);
+}
